@@ -1,0 +1,34 @@
+from abc import ABC
+from objects.config import Config
+
+
+# Scene class to encapsulate parameters
+class Scene(ABC):
+    def __init__(self):
+        pass
+
+
+class MandelbrotConfig(Config):
+    def __init__(self):
+        self.bbox = (-2.0, 1.0, -1.5, 1.5)  # (xmin, xmax, ymin, ymax)
+        self.max_iters = 100  # Maximum iterations for Mandelbrot
+        self.radius = 2.0  # Radius of convergence
+        self.resolution_x = 800
+
+    def validate(self):
+        """Custom validation for the MandelbrotConfig."""
+        if self.max_iters <= 0:
+            raise ValueError("max_iters must be positive.")
+        if not isinstance(self.bbox, tuple) or len(self.bbox) != 4:
+            raise ValueError("bbox must be a tuple with 4 elements.")
+
+
+# complex plane for mandelbrot example
+class MandelbrotScene(Scene):
+    def __init__(self, cfg: MandelbrotConfig):
+        super().__init__()
+        self.cfg = cfg
+        xmin, xmax, ymin, ymax = self.cfg.bbox
+        self.cfg.resolution_y = self.cfg.resolution_x * (ymax - ymin) / (xmax - xmin) #TODO: either one
+        self.cfg.resolution_y = int(self.cfg.resolution_y)
+        self.cfg.buffer_size = (self.cfg.resolution_y, self.cfg.resolution_x)
