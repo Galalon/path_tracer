@@ -17,7 +17,7 @@ def preprocess(cfg: MandelbrotConfig):
 @ti.kernel
 def render_gpu(scene: ti.template(), buffer: ti.template()):
     xmin, xmax, ymin, ymax = scene.cfg.bbox
-    height, width = scene.cfg.buffer_size
+    height, width = scene.cfg.buffer_size_hw
     for i, j in buffer:  # Loop over all pixels
         # Map pixel (i, j) to complex number c
         x = xmin + (xmax - xmin) * j / width
@@ -39,9 +39,9 @@ def render_gpu(scene: ti.template(), buffer: ti.template()):
 
 
 # CPU Rendering function
-def render_cpu(scene, buffer):
+def render_cpu(scene:MandelbrotScene, buffer):
     xmin, xmax, ymin, ymax = scene.cfg.bbox
-    height, width = scene.cfg.buffer_size
+    height, width = scene.cfg.buffer_size_hw
     for i in range(height):
         for j in range(width):
             # Map pixel (i, j) to complex number c

@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 class Config(ABC):
     def __init__(self):
-        self.buffer_size = (None, None)
+        self.buffer_size_hw = (None, None)
 
     @abstractmethod
     def validate(self):

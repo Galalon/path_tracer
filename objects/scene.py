@@ -31,4 +31,4 @@ class MandelbrotScene(Scene):
         xmin, xmax, ymin, ymax = self.cfg.bbox
         self.cfg.resolution_y = self.cfg.resolution_x * (ymax - ymin) / (xmax - xmin) #TODO: either one
         self.cfg.resolution_y = int(self.cfg.resolution_y)
-        self.cfg.buffer_size = (self.cfg.resolution_y, self.cfg.resolution_x)
+        self.cfg.buffer_size_hw = (self.cfg.resolution_y, self.cfg.resolution_x)

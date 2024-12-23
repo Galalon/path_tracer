@@ -22,11 +22,11 @@ def render_pipeline(cfg: Config, preprocess, render_cpu=None, render_gpu=None, p
     print("Rendering...")
     start_time = time.time()
     if debug:
-        buffer = np.zeros(scene.cfg.buffer_size, dtype=np.float32)
+        buffer = np.zeros(scene.cfg.buffer_size_hw, dtype=np.float32)
         raw_buffer = render_cpu(scene, buffer)  # Use CPU rendering for debugging
     else:
         # Allocate buffer locally
-        buffer = ti.field(dtype=ti.f32, shape=scene.cfg.buffer_size)
+        buffer = ti.field(dtype=ti.f32, shape=scene.cfg.buffer_size_hw)
         render_gpu(scene, buffer)  # Use GPU kernel for rendering
         raw_buffer = buffer.to_numpy()  # Convert Taichi buffer to NumPy array
     elapsed_time = time.time() - start_time
