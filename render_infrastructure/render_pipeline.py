@@ -2,11 +2,11 @@ import numpy as np
 import time
 import taichi as ti
 from matplotlib import pyplot as plt
-from objects.scene import Config
+from objects.scene import SceneConfig
 
 
 # Main function
-def render_pipeline(cfg: Config, preprocess, render_cpu=None, render_gpu=None, postprocess=None, debug=False):
+def render_pipeline(cfg: SceneConfig, preprocess, render_cpu=None, render_gpu=None, postprocess=None, debug=False):
     assert (render_cpu is not None) or (
         not debug), 'CPU render function is not defined, change debug mode or provide render_cpu'
     assert (render_gpu is not None) or (
@@ -44,27 +44,50 @@ if __name__ == "__main__":
     from objects.scene import MandelbrotConfig
 
     cfg = MandelbrotConfig()
+    # cfg.buffer_size_hw = ()
     print('Running on gpu:')
+    time_gpu = time.time()
     image_gpu = render_pipeline(cfg=cfg,
                                 preprocess=preprocess,
                                 render_cpu=render_cpu,
                                 render_gpu=render_gpu,
                                 postprocess=postprocess,
                                 debug=False)
+    time_gpu = time.time() - time_gpu
     print('Running on cpu:')
+    time_cpu = time.time()
     image_cpu = render_pipeline(cfg=cfg,
                                 preprocess=preprocess,
                                 render_cpu=render_cpu,
                                 render_gpu=render_gpu,
                                 postprocess=postprocess,
                                 debug=True)
+    time_cpu = time.time() - time_cpu
+
+    improvement_ratio = np.sqrt(time_cpu / time_gpu)
+    cfg.resolution_x = max(int(cfg.resolution_x / improvement_ratio), 1)
+
+    print('Running on cpu with decreased computation:')
+    time_cpu_decreased = time.time()
+    image_cpu_decreased = render_pipeline(cfg=cfg,
+                                          preprocess=preprocess,
+                                          render_cpu=render_cpu,
+                                          render_gpu=render_gpu,
+                                          postprocess=postprocess,
+                                          debug=True)
+    time_cpu_decreased = time.time() - time_cpu_decreased
+
     # Display the final image
-    plt.subplot(121)
-    plt.title('gpu')
+    plt.subplot(131)
+    plt.title(f'gpu ({time_gpu:.2f} s)')
     plt.imshow(image_gpu)
     plt.axis("off")
-    plt.subplot(122)
-    plt.title('cpu')
-    plt.imshow(image_gpu)
+    plt.subplot(132)
+    plt.title(f'cpu ({time_cpu:.2f} s)')
+    plt.imshow(image_cpu)
+    plt.axis("off")
+    plt.subplot(133)
+    plt.title(f'cpu low resolution ({time_cpu_decreased:.2f} s:)')
+    plt.imshow(image_cpu_decreased)
     plt.axis("off")
     plt.show()

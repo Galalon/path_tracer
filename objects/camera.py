@@ -1,5 +1,6 @@
-from objects.config import Config
 import numpy as np
+from objects.config import Config
+from objects.ray import Ray, RayConfig
 
 
 class CameraConfig(Config):
@@ -39,11 +40,14 @@ class Camera:
         width -= 1
         tan_fov_x = np.tan(np.deg2rad(self.cfg.fov_x / 2))
         tan_fov_y = np.tan(np.deg2rad(self.cfg.fov_y / 2))
-        ray_dir = [(2 * x_p - width) / width * tan_fov_x,
-                   (2 * y_p - height) / height * tan_fov_y,
-                   -1]
+        ray_cfg = RayConfig()
+        ray_cfg.dir = np.array([(2 * x_p - width) / width * tan_fov_x,
+                                (2 * y_p - height) / height * tan_fov_y,
+                                -1])
+        ray_cfg.origin = np.array([0, 0, 0])
         ray_origin = [0, 0, 0]
-        return ray_dir, ray_origin  # TODO: ray class
+        ray = Ray(ray_cfg)
+        return ray
 
 
 if __name__ == "__main__":
@@ -75,8 +79,8 @@ if __name__ == "__main__":
     origins = []
     for i in range(cfg.buffer_size_hw[0]):
         for j in range(cfg.buffer_size_hw[1]):
-            dir_, origin = camera.cast_ray(j, i)
-            dirs.append(dir_)
-            origins.append(origin)
-    plot_3d_vector_field(np.array(origin), np.array(dirs))
+            ray = camera.cast_ray(j, i)
+            dirs.append(ray.cfg.dir)
+            origins.append(ray.cfg.origin)
+    plot_3d_vector_field(np.array(origins), np.array(dirs))
     plt.show()

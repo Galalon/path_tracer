@@ -59,7 +59,7 @@ def render_cpu(scene:MandelbrotScene, buffer):
                 if np.linalg.norm(z) > scene.cfg.radius:
                     break
                 iter_count = k
-            buffer[j, i] = iter_count / scene.cfg.max_iters  # Normalize iteration count
+            buffer[i, j] = iter_count / scene.cfg.max_iters  # Normalize iteration count
     return buffer
 
 
