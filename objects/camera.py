@@ -34,8 +34,11 @@ class Camera:
 
     def cast_ray(self, x_p, y_p):
         height, width = self.cfg.buffer_size_hw
-        tan_fov_x = np.tan(np.deg2rad(self.cfg.fov_x))
-        tan_fov_y = np.tan(np.deg2rad(self.cfg.fov_y))
+        # fencepost problem
+        height -= 1
+        width -= 1
+        tan_fov_x = np.tan(np.deg2rad(self.cfg.fov_x / 2))
+        tan_fov_y = np.tan(np.deg2rad(self.cfg.fov_y / 2))
         ray_dir = [(2 * x_p - width) / width * tan_fov_x,
                    (2 * y_p - height) / height * tan_fov_y,
                    -1]
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
 
-    def plot_3d_vector_field(points, directions, arrow_length=0.5, normalize=True, color='blue'):
+    def plot_3d_vector_field(points, directions, arrow_length=0.1, normalize=True, color='blue'):
         """
         Plots a 3D vector field from points and direction vectors.
 
@@ -64,9 +67,9 @@ if __name__ == "__main__":
         ax.set_xlabel('X'), ax.set_ylabel('Y'), ax.set_zlabel('Z')
 
 
-
     cfg = CameraConfig()
-    cfg.buffer_size_hw = (10, 20)
+    cfg.buffer_size_hw = (3, 5)
+
     camera = Camera(cfg)
     dirs = []
     origins = []
@@ -75,5 +78,5 @@ if __name__ == "__main__":
             dir_, origin = camera.cast_ray(j, i)
             dirs.append(dir_)
             origins.append(origin)
-        plot_3d_vector_field(np.array(origin), np.array(dirs))
+    plot_3d_vector_field(np.array(origin), np.array(dirs))
     plt.show()
