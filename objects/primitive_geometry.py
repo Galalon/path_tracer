@@ -1,26 +1,44 @@
 from abc import ABC, abstractmethod
 from objects.config import Config
 from objects.ray import Ray
-import taichi as ti
 import numpy as np
+from objects.transform import TransformConfig, Transform, affine_transform
 
 
 class GeometryConfig(Config):
     def __init__(self):
         super().__init__()
-        self.transform = None  # TODO: implement
+        self.transform_cfg = TransformConfig()  # TODO: implement
 
 
 class Geometry(ABC):
     def __init__(self, cfg: GeometryConfig):
         self.cfg = cfg
+        self.transform = Transform(self.cfg.transform_cfg)
 
     @abstractmethod
-    def intersect_with_ray(self, ray: Ray):
+    def intersect_with_ray_local(self, ray: Ray):
         pass
 
-    @abstractmethod
+    def intersect_with_ray(self, ray: Ray):
+        ray_local_space = ray.apply_transform(self.transform.inverse_matrix)
+        local_point = self.intersect_with_ray_local(ray_local_space)
+        if local_point is None:
+            return None
+        point = affine_transform(local_point, self.transform.matrix)
+        return point
+
     def get_normal_at_point(self, point: np.ndarray):
+        point_local = affine_transform(point, self.transform.inverse_matrix)
+        normal_local = self.get_normal_at_point_local(point_local)
+        unit_point_local = point_local + normal_local
+        unit_point = affine_transform(unit_point_local, self.transform.matrix)
+        normal = unit_point - point
+        normal /= np.linalg.norm(normal)
+        return normal
+
+    @abstractmethod
+    def get_normal_at_point_local(self, point: np.ndarray):
         # if point is not on object - garbage out
         pass
 
@@ -40,7 +58,7 @@ class Sphere(Geometry):
         super().__init__(cfg)
         self.cfg = cfg
 
-    def intersect_with_ray(self, ray: Ray):
+    def intersect_with_ray_local(self, ray: Ray):
 
         assert np.isclose(np.linalg.norm(ray.cfg.dir), 1)
 
@@ -69,7 +87,7 @@ class Sphere(Geometry):
         else:
             return None
 
-    def get_normal_at_point(self, point):
+    def get_normal_at_point_local(self, point):
         n = point - self.cfg.origin
         n /= np.linalg.norm(n)
         return n
@@ -79,7 +97,7 @@ class PlaneConfig(GeometryConfig):
 
     def __init__(self):
         super().__init__()
-        self.normal = np.array([0.0, 0.0, -1.0])
+        self.normal = np.array([0.0, 0.0, 1.0])
         self.point = np.array([0.0, 0.0, 0.0])
         self.is_bidirectional = False
 
@@ -94,7 +112,7 @@ class Plane(Geometry):
         self.cfg = cfg
         self.cfg.normal /= np.linalg.norm(self.cfg.normal)
 
-    def intersect_with_ray(self, ray: Ray):
+    def intersect_with_ray_local(self, ray: Ray):
         d = ray.cfg.dir
         o = ray.cfg.origin
         n = self.cfg.normal
@@ -115,7 +133,7 @@ class Plane(Geometry):
 
         return o + t * d
 
-    def get_normal_at_point(self, point: np.ndarray):
+    def get_normal_at_point_local(self, point: np.ndarray):
         return self.cfg.normal
 
 
@@ -134,7 +152,7 @@ class Cube(Geometry):
         super().__init__(cfg)
         self.cfg = cfg
 
-    def intersect_with_ray(self, ray: Ray):
+    def intersect_with_ray_local(self, ray: Ray):
         d = ray.cfg.dir
         o = ray.cfg.origin
         c = self.cfg.origin
@@ -144,17 +162,17 @@ class Cube(Geometry):
         if parallel_intersection.any():
             return None
 
-        t_min = (c - np.sign(d)*r) / d
+        t_min = (c - np.sign(d) * r - o) / d
         t_min[d == 0] = c[d == 0] - r
         t_min = np.max(t_min)
-        t_max = (c + np.sign(d)*r) / d
+        t_max = (c + np.sign(d) * r - o) / d
         t_max[d == 0] = c[d == 0] + r
         t_max = np.min(t_max)
         if t_max < t_min or t_min < 0:
             return None
         return o + t_min * d
 
-    def get_normal_at_point(self, point: np.ndarray):
+    def get_normal_at_point_local(self, point: np.ndarray):
         diff_fron_origin = point - self.cfg.origin
         ind_max = np.argmax(np.abs(diff_fron_origin))
         n = np.zeros(3)
