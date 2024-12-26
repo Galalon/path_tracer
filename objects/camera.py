@@ -45,7 +45,6 @@ class Camera:
                                 (2 * y_p - height) / height * tan_fov_y,
                                 -1])
         ray_cfg.origin = np.array([0, 0, 0])
-        ray_origin = [0, 0, 0]
         ray = Ray(ray_cfg)
         return ray
 

@@ -21,12 +21,10 @@ class Ray:
     @staticmethod
     def sample_ray_from_hemisphere():
         pass
+
     @staticmethod
-    def reflect_dir(ray_dir:np.ndarray,normal:np.ndarray):
-        #TODO: remove if takes time
-        assert np.isclose(np.linalg.norm(ray_dir),1)
+    def reflect_dir(ray_dir: np.ndarray, normal: np.ndarray):
+        # TODO: remove if takes time
+        assert np.isclose(np.linalg.norm(ray_dir), 1)
         assert np.isclose(np.linalg.norm(normal), 1)
         return ray_dir - 2 * ray_dir.dot(normal) * normal
-
-
-

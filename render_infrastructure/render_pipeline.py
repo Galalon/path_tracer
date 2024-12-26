@@ -6,7 +6,7 @@ from objects.scene import SceneConfig
 
 
 # Main function
-def render_pipeline(cfg: SceneConfig, preprocess, render_cpu=None, render_gpu=None, postprocess=None, debug=False):
+def render_pipeline(cfg: SceneConfig, preprocess, render_cpu=None, render_gpu=None, postprocess=None, debug=False, n_channels=1):
     assert (render_cpu is not None) or (
         not debug), 'CPU render function is not defined, change debug mode or provide render_cpu'
     assert (render_gpu is not None) or (
@@ -21,12 +21,13 @@ def render_pipeline(cfg: SceneConfig, preprocess, render_cpu=None, render_gpu=No
     # Main rendering loop
     print("Rendering...")
     start_time = time.time()
+    buffer_shape = list(scene.cfg.buffer_size_hw) + [n_channels]
     if debug:
-        buffer = np.zeros(scene.cfg.buffer_size_hw, dtype=np.float32)
+        buffer = np.zeros(buffer_shape, dtype=np.float32)
         raw_buffer = render_cpu(scene, buffer)  # Use CPU rendering for debugging
     else:
         # Allocate buffer locally
-        buffer = ti.field(dtype=ti.f32, shape=scene.cfg.buffer_size_hw)
+        buffer = ti.field(dtype=ti.f32, shape=buffer_shape)
         render_gpu(scene, buffer)  # Use GPU kernel for rendering
         raw_buffer = buffer.to_numpy()  # Convert Taichi buffer to NumPy array
     elapsed_time = time.time() - start_time
