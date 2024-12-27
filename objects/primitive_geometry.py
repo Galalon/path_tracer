@@ -2,37 +2,36 @@ from abc import ABC, abstractmethod
 from objects.config import Config
 from objects.ray import Ray
 import numpy as np
-from objects.transform import TransformConfig, Transform, affine_transform
+from objects.transform import Transform, affine_transform
 
 
 class GeometryConfig(Config):
     def __init__(self):
         super().__init__()
-        self.transform_cfg = TransformConfig()  # TODO: implement
+        self.transform = Transform()  # TODO: implement
 
 
 class Geometry(ABC):
     def __init__(self, cfg: GeometryConfig):
         self.cfg = cfg
-        self.transform = Transform(self.cfg.transform_cfg)
 
     @abstractmethod
     def intersect_with_ray_local(self, ray: Ray):
         pass
 
     def intersect_with_ray(self, ray: Ray):
-        ray_local_space = ray.apply_transform(self.transform.inverse_matrix)
+        ray_local_space = ray.apply_transform(self.cfg.transform.inverse_matrix)
         local_point = self.intersect_with_ray_local(ray_local_space)
         if local_point is None:
             return None
-        point = affine_transform(local_point, self.transform.matrix)
+        point = affine_transform(local_point, self.cfg.transform.matrix)
         return point
 
     def get_normal_at_point(self, point: np.ndarray):
-        point_local = affine_transform(point, self.transform.inverse_matrix)
+        point_local = affine_transform(point, self.cfg.transform.inverse_matrix)
         normal_local = self.get_normal_at_point_local(point_local)
         unit_point_local = point_local + normal_local
-        unit_point = affine_transform(unit_point_local, self.transform.matrix)
+        unit_point = affine_transform(unit_point_local, self.cfg.transform.matrix)
         normal = unit_point - point
         normal /= np.linalg.norm(normal)
         return normal

@@ -2,34 +2,24 @@ import numpy as np
 from objects.config import Config
 
 
-class TransformConfig(Config):
+class Transform(Config):
     def __init__(self):
-        super().__init__()
         self.translation = np.array([0.0, 0.0, 0.0])
         self.rotation = np.array([0.0, 0.0, 0.0])  # Euler angles in degrees
         self.scale = np.array([1.0, 1.0, 1.0])
-
-    def validate(self):
-        return
-
-
-class Transform:
-    def __init__(self, cfg:TransformConfig):
-        self.cfg = cfg
         self.matrix = np.eye(4)  # Identity matrix
         self.inverse_matrix = np.eye(4)
-        self._recalculate_matrix()
 
     def set_translation(self, x: float, y: float, z: float):
-        self.cfg.translation = np.array([x, y, z])
+        self.translation = np.array([x, y, z])
         self._recalculate_matrix()
 
     def set_rotation(self, rx: float, ry: float, rz: float):
-        self.cfg.rotation = np.array([rx, ry, rz])
+        self.rotation = np.array([rx, ry, rz])
         self._recalculate_matrix()
 
     def set_scale(self, sx: float, sy: float, sz: float):
-        self.cfg.scale = np.array([sx, sy, sz])
+        self.scale = np.array([sx, sy, sz])
         self._recalculate_matrix()
 
     @staticmethod
@@ -42,32 +32,32 @@ class Transform:
 
     def apply_translation(self, d: float, axis: str):
         index = self._axis_to_index(axis)
-        self.cfg.translation[index] += d
+        self.translation[index] += d
         self._recalculate_matrix()
 
     def apply_rotation(self, d: float, axis: str):
         index = self._axis_to_index(axis)
-        self.cfg.rotation[index] += d
+        self.rotation[index] += d
         self._recalculate_matrix()
 
     def apply_scale(self, d: float, axis: str):
         index = self._axis_to_index(axis)
-        self.cfg.scale[index] *= d
+        self.scale[index] *= d
         self._recalculate_matrix()
 
     def set_all(self, translation=None, rotation=None, scale=None):
         if translation is not None:
-            self.cfg.translation = np.array(translation)
+            self.translation = np.array(translation)
         if rotation is not None:
-            self.cfg.rotation = np.array(rotation)
+            self.rotation = np.array(rotation)
         if scale is not None:
-            self.cfg.scale = np.array(scale)
+            self.scale = np.array(scale)
         self._recalculate_matrix()
 
     def _recalculate_matrix(self):
-        t_matrix = Transform.matrix_translation(*self.cfg.translation)
-        r_matrix = Transform.matrix_rotation_euler(*self.cfg.rotation)
-        s_matrix = Transform.matrix_scaling(*self.cfg.scale)
+        t_matrix = Transform.matrix_translation(*self.translation)
+        r_matrix = Transform.matrix_rotation_euler(*self.rotation)
+        s_matrix = Transform.matrix_scaling(*self.scale)
 
         # Combine matrices in scale -> rotate -> translate order
         self.matrix = t_matrix @ r_matrix @ s_matrix
@@ -118,6 +108,19 @@ class Transform:
 
         # Combine rotations in Z -> Y -> X order
         return rz_matrix @ ry_matrix @ rx_matrix
+
+    def to_dict(self):
+        return {'translation': self.translation, 'rotation': self.rotation, 'scale': self.scale}
+
+    @classmethod
+    def from_dict(cls, config_dict: dict):
+        t = Transform()
+        t.set_all(config_dict['translation'], config_dict['rotation'], config_dict['scale'])
+
+        return t
+
+    def validate(self):
+        return
 
 
 def affine_transform(o, transform_matrix):

@@ -1,7 +1,7 @@
 import numpy as np
 from objects.config import Config
 from objects.ray import Ray, RayConfig
-
+from objects.transform import Transform,affine_transform
 
 class CameraConfig(Config):
     def __init__(self):
@@ -9,7 +9,7 @@ class CameraConfig(Config):
         self.buffer_size_hw = (480, 640)
         self.fov_x = 90  # in degrees
         self.fov_y = None  # as long as one fov is initialized the other will be determined from the resolution
-        self.transform = None
+        self.transform = Transform()
 
     def validate(self):
         if self.fov_x is not None:
@@ -44,7 +44,11 @@ class Camera:
         ray_cfg.dir = np.array([(2 * x_p - width) / width * tan_fov_x,
                                 (2 * y_p - height) / height * tan_fov_y,
                                 -1])
+        unit_point = ray_cfg.dir + ray_cfg.origin
+        unit_point = affine_transform(unit_point, self.cfg.transform.matrix)
         ray_cfg.origin = np.array([0, 0, 0])
+        ray_cfg.origin = affine_transform(ray_cfg.origin, self.cfg.transform.matrix)
+        ray_cfg.dir = unit_point - ray_cfg.origin
         ray = Ray(ray_cfg)
         return ray
 

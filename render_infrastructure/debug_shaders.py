@@ -65,43 +65,42 @@ if __name__ == "__main__":
 
     cfg = RenderSceneConfig()
     sphere_cfg = SphereConfig()
-    sphere_transform = Transform(TransformConfig())
-    sphere_transform.apply_translation(-2, 'z')
-    sphere_transform.apply_scale(0.5, 'x')
+    sphere_cfg.transform.apply_translation(-2, 'z')
+    sphere_cfg.transform.apply_scale(0.5, 'x')
 
-    sphere_cfg.transform_cfg = sphere_transform.cfg
     cfg.objects_cfg.append(sphere_cfg)
 
     plane_config = PlaneConfig()
-    plane_transform = Transform(TransformConfig())
-    plane_transform.apply_translation(-2, 'z')
-    plane_transform.apply_rotation(70, 'x')
-    plane_config.transform_cfg = plane_transform.cfg
+    plane_config.transform.apply_translation(-2, 'z')
+    plane_config.transform.apply_rotation(70, 'x')
 
     cfg.objects_cfg.append(plane_config)
 
     cube_config = CubeConfig()
-    cube_transform = Transform(TransformConfig())
-    cube_transform.set_translation(2, -1, -2.5)
-    cube_transform.set_scale(2, 0.5, 0.5)
-    cube_transform.set_rotation(0, 20, 60)
-    cube_config.transform_cfg = cube_transform.cfg
+    cube_config.transform.set_translation(2, -1, -2.5)
+    cube_config.transform.set_scale(2, 0.5, 0.5)
+    cube_config.transform.set_rotation(0, 20, 60)
     cfg.objects_cfg.append(cube_config)
 
-    image = render_pipeline(cfg=cfg,
+    cfg.camera_cfg.transform.apply_translation(-1, 'y')
+    cfg.camera_cfg.transform.apply_translation(1, 'z')
+    cfg.camera_cfg.transform.apply_rotation(10, 'x')
+    cfg.camera_cfg.transform.apply_rotation(7.5, 'y')
+    cfg.camera_cfg.transform.apply_rotation(3, 'z')
+    image_depth = render_pipeline(cfg=cfg,
                             preprocess=preprocess,
                             render_cpu=calc_depth,
                             render_gpu=None,
-                            postprocess=lambda s, b: b,
+                            postprocess=lambda s, b: np.log(b),
                             debug=True,
                             n_channels=1)
     # Display the final image
-    plt.imshow(np.squeeze(image), cmap='gray')
-    plt.axis("off")
+    # plt.imshow(np.squeeze(image_depth), cmap='gray')
+    # plt.axis("off")
     # plt.savefig("mandelbrot.png", dpi=300)
-    plt.show()
+    # plt.show()
 
-    image = render_pipeline(cfg=cfg,
+    image_normal = render_pipeline(cfg=cfg,
                             preprocess=preprocess,
                             render_cpu=calc_normal,
                             render_gpu=None,
@@ -109,6 +108,15 @@ if __name__ == "__main__":
                             debug=True,
                             n_channels=3)
     # Display the final image
-    plt.imshow(np.squeeze(image))
+    # plt.imshow(np.squeeze(image_normal))
+    # plt.axis("off")
+    # plt.show()
+    plt.subplot(121)
+    plt.title('depth map')
+    plt.imshow(np.squeeze(image_depth), cmap='gray')
+    plt.axis("off")
+    plt.subplot(122)
+    plt.title('normal map')
+    plt.imshow(np.squeeze(image_normal), cmap='gray')
     plt.axis("off")
     plt.show()
