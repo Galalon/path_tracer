@@ -1,5 +1,6 @@
 from abc import ABC
 from objects.config import Config
+import numpy as np
 
 
 # Scene class to encapsulate parameters
@@ -43,18 +44,18 @@ class MandelbrotScene(Scene):
 
 
 from objects.camera import CameraConfig, Camera
-from objects.primitive_geometry import *
+from objects.render_object import RenderObjectConfig, RenderObject
 
 
 class RenderSceneConfig(SceneConfig):
     def __init__(self):
         super().__init__()
         self.camera_cfg = CameraConfig()
-        self.objects_cfg = []
-        self.buffer_size_hw = (480,640)
+        self.objects_cfg = [RenderObjectConfig()]
+        self.buffer_size_hw = (480, 640)
 
     def validate(self):
-        return
+        assert self.camera_cfg.buffer_size_hw == self.buffer_size_hw
 
 
 class RenderScene(Scene):
@@ -62,4 +63,20 @@ class RenderScene(Scene):
         super().__init__(cfg)
         self.cfg = cfg
         self.camera = Camera(self.cfg.camera_cfg)
-        self.objects = [GEOMETRY_MAPPING[type(c)](c) for c in self.cfg.objects_cfg]
+        self.camera.cfg.buffer_size_hw = self.cfg.buffer_size_hw
+        self.objects = [RenderObject(e) for e in self.cfg.objects_cfg]
+        self.lights = [e for e in self.objects if np.sum(np.abs(e.material.cfg.emittance)) > 0]
+
+
+class PhongSceneConfig(Config):
+    def __init__(self):
+        super().__init__()
+        self.ambient_light = [1.0, 1.0, 1.0]
+
+
+class PhongScene(RenderScene):
+    def __init__(self, cfg: PhongSceneConfig):
+        super().__init__(cfg)
+        self.cfg = cfg
+        for o in self.objects:
+            o.material.cfg.ambient = self.cfg.ambient_light

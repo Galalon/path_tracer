@@ -6,7 +6,7 @@ from objects.transform import Transform, affine_transform
 
 
 class GeometryConfig(Config):
-    def __init__(self):
+    def __init__(self) -> object:
         super().__init__()
         self.transform = Transform()  # TODO: implement
 
@@ -27,6 +27,11 @@ class Geometry(ABC):
         point = affine_transform(local_point, self.cfg.transform.matrix)
         return point
 
+    @abstractmethod
+    def get_normal_at_point_local(self, point: np.ndarray):
+        # if point is not on object - garbage out
+        pass
+
     def get_normal_at_point(self, point: np.ndarray):
         point_local = affine_transform(point, self.cfg.transform.inverse_matrix)
         normal_local = self.get_normal_at_point_local(point_local)
@@ -37,9 +42,17 @@ class Geometry(ABC):
         return normal
 
     @abstractmethod
-    def get_normal_at_point_local(self, point: np.ndarray):
-        # if point is not on object - garbage out
+    def get_light_source_dir_local(self, point: np.ndarray):
         pass
+
+    def get_light_source_dir(self, point: np.ndarray):  # TODO: refactor - basically the same as get_normal_at_point
+        point_local = affine_transform(point, self.cfg.transform.inverse_matrix)
+        light_local = self.get_light_source_dir_local(point_local)
+        unit_point_local = point_local + light_local
+        unit_point = affine_transform(unit_point_local, self.cfg.transform.matrix)
+        light = unit_point - point
+        light /= np.linalg.norm(light)
+        return light
 
 
 class SphereConfig(GeometryConfig):
@@ -91,6 +104,11 @@ class Sphere(Geometry):
         n /= np.linalg.norm(n)
         return n
 
+    def get_light_source_dir_local(self, point: np.ndarray):
+        l = self.cfg.origin - point
+        l /= np.linalg.norm(l)
+        return l
+
 
 class PlaneConfig(GeometryConfig):
 
@@ -135,6 +153,9 @@ class Plane(Geometry):
     def get_normal_at_point_local(self, point: np.ndarray):
         return self.cfg.normal
 
+    def get_light_source_dir_local(self, point: np.ndarray):
+        return -self.cfg.normal
+
 
 class CubeConfig(GeometryConfig):
     def __init__(self):
@@ -177,6 +198,11 @@ class Cube(Geometry):
         n = np.zeros(3)
         n[ind_max] = np.sign(diff_fron_origin[ind_max])
         return n
+
+    def get_light_source_dir_local(self, point: np.ndarray):
+        l = self.cfg.origin - point
+        l /= np.linalg.norm(l)
+        return l
 
 
 GEOMETRY_MAPPING = {
