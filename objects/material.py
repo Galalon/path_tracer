@@ -31,9 +31,12 @@ class PhongMaterial:
 
     def get_color_per_light(self, view_ray: Ray, light_ray: Ray, point: np.ndarray, normal: np.ndarray):
         if light_ray is None:
-            return np.array([0.0, 0.0, 0.0])
+            return np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])
         l_dir = light_ray.cfg.dir
         diffuse_light = l_dir.dot(normal) * self.cfg.diffuse
-        r_dir = Ray.reflect_dir(l_dir, normal)
-        specular_light = (r_dir.dot(view_ray.cfg.dir)) ** self.cfg.glossiness * self.cfg.specular
-        return diffuse_light + specular_light
+        r_dir = Ray.reflect_dir(-l_dir, normal)  # refloct works for dirs from the light to a point
+        specular_light = (r_dir.dot(
+            -view_ray.cfg.dir)) ** self.cfg.glossiness * self.cfg.specular  # specular = r*v where v - direction towards camera
+        diffuse_light = np.maximum(diffuse_light, 0)
+        specular_light = np.maximum(specular_light, 0)
+        return diffuse_light, specular_light

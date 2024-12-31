@@ -68,10 +68,11 @@ class RenderScene(Scene):
         self.lights = [e for e in self.objects if np.sum(np.abs(e.material.cfg.emittance)) > 0]
 
 
-class PhongSceneConfig(Config):
+class PhongSceneConfig(RenderSceneConfig):
     def __init__(self):
         super().__init__()
         self.ambient_light = [1.0, 1.0, 1.0]
+
 
 
 class PhongScene(RenderScene):

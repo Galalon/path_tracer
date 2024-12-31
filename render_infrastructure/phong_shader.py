@@ -1,17 +1,19 @@
-from objects.scene import RenderScene, RenderSceneConfig
+from objects.scene import PhongScene, PhongSceneConfig
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-def preprocess(cfg: RenderSceneConfig):
-    scene = RenderScene(cfg)
+def preprocess(cfg: PhongSceneConfig):
+    scene = PhongScene(cfg)
     return scene
 
 
-def calc_phong_color(scene: RenderScene, buffer):
+def calc_phong_color(scene: PhongScene, buffer):
     height, width = scene.cfg.buffer_size_hw
     for i in range(height):
         for j in range(width):
+            if i == 58 and j == 68:
+                i = i
             ray = scene.camera.cast_ray(j, i)
             depth = np.inf
             intersected_obj = None
@@ -25,15 +27,27 @@ def calc_phong_color(scene: RenderScene, buffer):
                         intersected_obj = obj
                         depth = curr_depth
                         point = intersection
+
             if intersected_obj is not None:
                 n = intersected_obj.geometry.get_normal_at_point(point)
-                color = np.array([0.0, 0.0, 0.0])
+                diffuse = np.array([0.0, 0.0, 0.0])
+                specular = np.array([0.0, 0.0, 0.0])
                 for l in scene.lights:
                     if l is intersected_obj:
                         continue
                     light_ray = calc_light_dir(l, point, intersected_obj, scene)
-                    color += intersected_obj.material.get_color_per_light(ray, light_ray, intersection, n)
-                color += intersected_obj.material.cfg.ambient + intersected_obj.material.cfg.emittance
+                    curr_diffuse, curr_specular = intersected_obj.material.get_color_per_light(ray, light_ray,
+                                                                                               point, n)
+                    diffuse += curr_diffuse
+                    specular += curr_specular
+                # assert (specular>=0).all()
+                # assert (diffuse >= 0).all()
+                color = intersected_obj.material.cfg.k_specular * specular + \
+                        intersected_obj.material.cfg.k_diffuse * diffuse + \
+                        intersected_obj.material.cfg.k_ambient * intersected_obj.material.cfg.ambient + \
+                        intersected_obj.material.cfg.emittance
+            else:
+                color = scene.cfg.ambient_light
             buffer[i, j] = color
     return buffer
 
@@ -69,8 +83,9 @@ if __name__ == "__main__":
     from objects.transform import Transform
     from render_infrastructure.debug_shaders import calc_depth
 
-    downsample_factor = 5
-    cfg = RenderSceneConfig()
+    downsample_factor = 2
+    cfg = PhongSceneConfig()
+    cfg.ambient_light = np.array([0.5, 0.6, 0.7])
     cfg.objects_cfg = []
     cfg.buffer_size_hw = (480 // downsample_factor, 640 // downsample_factor)
     sphere_cfg = RenderObjectConfig()
@@ -84,6 +99,7 @@ if __name__ == "__main__":
     sphere_cfg.material_cfg.diffuse = np.array([1.0, 0.0, 0.0])
     sphere_cfg.material_cfg.specular = np.array([1.0, 1.0, 1.0])
     sphere_cfg.material_cfg.glossiness = 5
+    sphere_cfg.material_cfg.k_ambient = 0.1
 
     cfg.objects_cfg.append(sphere_cfg)
 
@@ -91,6 +107,7 @@ if __name__ == "__main__":
     plane_config.geometry_cfg = PlaneConfig()
     plane_config.geometry_cfg.transform.set_translation(0, 0, 0)
     plane_config.material_cfg.diffuse = np.array([1.0, 1.0, 0.5])
+    plane_config.material_cfg.k_ambient = 0.3
     cfg.objects_cfg.append(plane_config)
 
     cfg.camera_cfg.transform.set_translation(0, 0, 0.5)
