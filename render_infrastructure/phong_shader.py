@@ -27,10 +27,35 @@ def calc_phong_color(scene: RenderScene, buffer):
                         point = intersection
             if intersected_obj is not None:
                 n = intersected_obj.geometry.get_normal_at_point(point)
-                color = intersected_obj.material.get_color(ray, n, point, scene, intersected_obj)
+                color = np.array([0.0, 0.0, 0.0])
+                for l in scene.lights:
+                    if l is intersected_obj:
+                        continue
+                    light_ray = calc_light_dir(l, point, intersected_obj, scene)
+                    color += intersected_obj.material.get_color_per_light(ray, light_ray, intersection, n)
+                color += intersected_obj.material.cfg.ambient + intersected_obj.material.cfg.emittance
             buffer[i, j] = color
     return buffer
 
+
+from objects.ray import Ray, RayConfig
+
+
+def calc_light_dir(l, point, intersected_obj, scene):
+    l_dir = l.geometry.get_light_source_dir(point)
+    light_ray_cfg = RayConfig()
+    light_ray_cfg.origin = point.copy()
+    light_ray_cfg.dir = l_dir
+    light_ray = Ray(light_ray_cfg)
+    light_intersection = l.geometry.intersect_with_ray(light_ray)
+    light_intersection_dist = np.linalg.norm(light_intersection - point)
+    assert light_intersection is not None
+    for obj in scene.objects:  # TODO: intersection loop?
+        if obj is not l and obj is not intersected_obj:
+            intersection = obj.geometry.intersect_with_ray(light_ray)
+            if intersection is not None and np.linalg.norm(intersection - point) < light_intersection_dist:
+                return None
+    return light_ray
 
 
 def postprocess(scene, raw_buffer):
