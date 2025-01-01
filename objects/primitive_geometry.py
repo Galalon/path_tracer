@@ -160,7 +160,7 @@ class Plane(Geometry):
 class CubeConfig(GeometryConfig):
     def __init__(self):
         super().__init__()
-        self.side_length = 1
+        self.side_length = 2
         self.origin = np.array([0.0, 0.0, 0.0])
 
     def validate(self):
