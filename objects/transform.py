@@ -9,6 +9,7 @@ class Transform(Config):
         self.scale = np.array([1.0, 1.0, 1.0])
         self.matrix = np.eye(4)  # Identity matrix
         self.inverse_matrix = np.eye(4)
+        self.rotation_order = 'xyz'  # Configurable Euler angle order
 
     def set_translation(self, x: float, y: float, z: float):
         self.translation = np.array([x, y, z])
@@ -54,14 +55,33 @@ class Transform(Config):
             self.scale = np.array(scale)
         self._recalculate_matrix()
 
+    def set_rotation_order(self, order: str):
+        self.rotation_order = order  # Change the Euler rotation order
+        self._recalculate_matrix()
+
     def _recalculate_matrix(self):
         t_matrix = Transform.matrix_translation(*self.translation)
-        r_matrix = Transform.matrix_rotation_euler(*self.rotation)
+        r_matrix = self._compute_rotation_matrix()
         s_matrix = Transform.matrix_scaling(*self.scale)
 
         # Combine matrices in scale -> rotate -> translate order
         self.matrix = t_matrix @ r_matrix @ s_matrix
         self.inverse_matrix = np.linalg.inv(self.matrix)
+
+    def _compute_rotation_matrix(self):
+        # Compute the rotation matrix based on Euler angles and order
+        angles = np.radians(self.rotation)
+        rotation_matrix = np.eye(4)
+        matrices = {
+            'x': Transform.matrix_rotation_x,
+            'y': Transform.matrix_rotation_y,
+            'z': Transform.matrix_rotation_z,
+        }
+        for i, a in enumerate(angles):
+            curr_mat = matrices[self.rotation_order[i]](a)
+            rotation_matrix = curr_mat@rotation_matrix
+
+        return rotation_matrix
 
     @staticmethod
     def matrix_translation(tx: float, ty: float, tz: float) -> np.ndarray:
@@ -78,44 +98,44 @@ class Transform(Config):
         return mat
 
     @staticmethod
-    def matrix_rotation_euler(rx: float, ry: float, rz: float) -> np.ndarray:
-        # Convert degrees to radians
-        rx, ry, rz = np.radians([rx, ry, rz])
-
-        # Rotation matrices for X, Y, Z axes
-        cos, sin = np.cos, np.sin
-
-        rx_matrix = np.array([
+    def matrix_rotation_x(angle: float) -> np.ndarray:
+        cos, sin = np.cos(angle), np.sin(angle)
+        return np.array([
             [1, 0, 0, 0],
-            [0, cos(rx), -sin(rx), 0],
-            [0, sin(rx), cos(rx), 0],
+            [0, cos, -sin, 0],
+            [0, sin, cos, 0],
             [0, 0, 0, 1]
         ])
 
-        ry_matrix = np.array([
-            [cos(ry), 0, sin(ry), 0],
+    @staticmethod
+    def matrix_rotation_y(angle: float) -> np.ndarray:
+        cos, sin = np.cos(angle), np.sin(angle)
+        return np.array([
+            [cos, 0, sin, 0],
             [0, 1, 0, 0],
-            [-sin(ry), 0, cos(ry), 0],
+            [-sin, 0, cos, 0],
             [0, 0, 0, 1]
         ])
 
-        rz_matrix = np.array([
-            [cos(rz), -sin(rz), 0, 0],
-            [sin(rz), cos(rz), 0, 0],
+    @staticmethod
+    def matrix_rotation_z(angle: float) -> np.ndarray:
+        cos, sin = np.cos(angle), np.sin(angle)
+        return np.array([
+            [cos, -sin, 0, 0],
+            [sin, cos, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]
         ])
 
-        # Combine rotations in Z -> Y -> X order
-        return rz_matrix @ ry_matrix @ rx_matrix
-
     def to_dict(self):
-        return {'translation': self.translation, 'rotation': self.rotation, 'scale': self.scale}
+        return {'translation': self.translation.tolist(), 'rotation': self.rotation.tolist(), 'scale': self.scale.tolist()}
 
     @classmethod
     def from_dict(cls, config_dict: dict):
         t = Transform()
-        t.set_all(config_dict['translation'], config_dict['rotation'], config_dict['scale'])
+        t.set_all(np.array(config_dict['translation']),
+                  np.array(config_dict['rotation']),
+                  np.array(config_dict['scale']))
 
         return t
 
