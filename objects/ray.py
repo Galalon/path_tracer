@@ -37,7 +37,7 @@ class Ray:
         pass
 
     @staticmethod
-    def reflect_dir(ray_dir: np.ndarray, normal: np.ndarray):
+    def reflect_ray_dir(ray_dir: np.ndarray, normal: np.ndarray):
         # TODO: remove if takes time
         assert np.isclose(np.linalg.norm(ray_dir), 1)
         assert np.isclose(np.linalg.norm(normal), 1)

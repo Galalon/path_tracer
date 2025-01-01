@@ -4,9 +4,11 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import copy  # To duplicate the scene
 
+
 def preprocess(cfg: PhongSceneConfig):
     scene = PhongScene(cfg)
     return scene
+
 
 def calc_phong_color_multiprocess(scene, buffer, num_processes=7):
     """
@@ -43,25 +45,16 @@ def calc_phong_color_multiprocess(scene, buffer, num_processes=7):
 
     return buffer
 
+
 from tqdm import tqdm
+
 
 def calc_phong_color_row(scene: PhongScene, buffer, start_row=0, end_row=480):
     height, width = scene.cfg.buffer_size_hw
     for i in tqdm(range(start_row, end_row)):
         for j in range(width):
             ray = scene.camera.cast_ray(j, i)
-            depth = np.inf
-            intersected_obj = None
-            point = None
-            for obj in scene.objects:
-                intersection = obj.geometry.intersect_with_ray(ray)
-                if intersection is not None:
-                    curr_depth = np.linalg.norm(ray.cfg.origin - intersection)
-                    if curr_depth < depth:
-                        intersected_obj = obj
-                        depth = curr_depth
-                        point = intersection
-
+            intersected_obj, point = scene.intersect_ray_with_scene_objects(ray)
             if intersected_obj is not None:
                 n = intersected_obj.geometry.get_normal_at_point(point)
                 diffuse = np.array([0.0, 0.0, 0.0])
@@ -87,21 +80,19 @@ def calc_phong_color_row(scene: PhongScene, buffer, start_row=0, end_row=480):
 from objects.ray import Ray, RayConfig
 
 
-def calc_light_dir(l, point, intersected_obj, scene):
-    l_dir = l.geometry.get_light_source_dir(point)
+def calc_light_dir(light, point, intersected_obj, scene):
+    l_dir = light.geometry.get_light_source_dir(point)
     light_ray_cfg = RayConfig()
     light_ray_cfg.origin = point.copy()
     light_ray_cfg.dir = l_dir
     light_ray = Ray(light_ray_cfg)
-    light_intersection = l.geometry.intersect_with_ray(light_ray)
-    light_intersection_dist = np.linalg.norm(light_intersection - point)
+    light_intersection = light.geometry.intersect_with_ray(light_ray)
     assert light_intersection is not None
-    for obj in scene.objects:  # TODO: intersection loop?
-        if obj is not l and obj is not intersected_obj:
-            intersection = obj.geometry.intersect_with_ray(light_ray)
-            if intersection is not None and np.linalg.norm(intersection - point) < light_intersection_dist:
-                return None
-    return light_ray
+    shadow_intersected_obj, shadow_point = scene.intersect_ray_with_scene_objects(light_ray, objects_to_ignore=[intersected_obj])
+    if shadow_intersected_obj is not light: #something is blocking the light
+        return None
+    else:
+        return light_ray
 
 
 def postprocess(scene, raw_buffer):
@@ -122,7 +113,7 @@ if __name__ == "__main__":
     cfg.buffer_size_hw = (480 // downsample_factor, 640 // downsample_factor)
     light_cfg = RenderObjectConfig()
     light_cfg.geometry_cfg.transform.set_translation(4.0, 3.0, 3.0)
-    light_cfg.material_cfg.emittance = 2*np.array([0.7, 0.8, 1.1])
+    light_cfg.material_cfg.emittance = 2 * np.array([0.7, 0.8, 1.1])
     light_cfg.material_cfg.k_ambient = 0.1
     cfg.objects_cfg.append(light_cfg)
 
@@ -169,7 +160,7 @@ if __name__ == "__main__":
                             preprocess=preprocess,
                             render_cpu=calc_phong_color_multiprocess,
                             render_gpu=None,
-                            postprocess= postprocess,
+                            postprocess=postprocess,
                             debug=True,
                             n_channels=3)
 

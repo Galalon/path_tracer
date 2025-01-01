@@ -34,7 +34,7 @@ class PhongMaterial:
             return np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])
         l_dir = light_ray.cfg.dir
         diffuse_light = l_dir.dot(normal) * self.cfg.diffuse
-        r_dir = Ray.reflect_dir(-l_dir, normal)  # refloct works for dirs from the light to a point
+        r_dir = Ray.reflect_ray_dir(-l_dir, normal)  # refloct works for dirs from the light to a point
         specular_light = (r_dir.dot(
             -view_ray.cfg.dir)) ** self.cfg.glossiness * self.cfg.specular  # specular = r*v where v - direction towards camera
         diffuse_light = np.maximum(diffuse_light, 0)
